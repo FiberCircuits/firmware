@@ -1,6 +1,6 @@
 # firmware
 
-This firmaware is arduino compatible, each folder has its instructions.
+This firmware is arduino compatible, each folder has its own instructions.
 
 ![06_arduino](https://github.com/FiberCircuits/firmware/assets/142898164/8b43103a-d4fc-4774-af3c-6f6d870a6a2f)
 
