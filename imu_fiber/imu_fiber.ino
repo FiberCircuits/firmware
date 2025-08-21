@@ -2,26 +2,33 @@
 #include "accel.h"
 #include "mag.h"
 
-// #define ARDUINO_VISUALIZATION
+
+//#define ARDUINO_VISUALIZATION
 
 
-#ifdef USE_CAP_SENSE // defined in firmware.h
-// capacitive sensing
+// note: to compile everything, the -Os flag *with LTO* is needed!
+#define USE_MAG       // U2
+#define USE_ACC0      // U3
+#define USE_ACC1      // U4
+#define USE_CAP_SENSE // U5
+
+
+// capacitive touch sensing
+#ifdef USE_CAP_SENSE
 const int cap_touch_pin = PA3;
-ADCTouchSensor cap_touch = ADCTouchSensor(cap_touch_pin, GROUNDED_PIN);
-int cap_touch_reference = 0;
 #endif
 
-// accelerometer
+// accelerometers
+#if defined(USE_ACC0) || defined(USE_ACC1)
 MC3672 accel = MC3672();
+#endif
 
 // magnetometer
+#ifdef USE_MAG
 Adafruit_MMC5603 mag = Adafruit_MMC5603();
+#endif
 
 
-#define USE_MAG // U2
-#define USE_ACC0 // U3
-#define USE_ACC1 // U4
 
 ///////////////////////////////////////////////////////////////////////////////
 void setup()
@@ -32,14 +39,7 @@ void setup()
   Serial.setRx(_RX);
   Serial.setTx(_TX);
   Serial.begin(115200);
-  Serial.print("t mx my mz ax ay az\n");
-
-#ifdef USE_CAP_SENSE
-  // capacitive sensing
-  cap_touch.begin();
-  delay(100);
-  cap_touch_reference = cap_touch.read(50);
-#endif
+  //Serial.print("t mx my mz ax ay az\n");
 
   // accelerometer
 #ifdef USE_ACC0
@@ -53,7 +53,7 @@ void setup()
   // magnetometer
   if (!mag.begin(MMC56X3_DEFAULT_ADDRESS, &Wire)) {
     while (1) {                                         // TODO ?
-        Serial.print("!\n");
+        Serial.print("\t!\n");
     }
   }
   mag.setDataRate(100); // in Hz, from 1-255 or 1000
@@ -66,7 +66,7 @@ void setup()
 ///////////////////////////////////////////////////////////////////////////////
 void loop()
 {
-  // touch sensor
+  // touch sensor: 1 or 0
   printTouchSense();
 
 #ifdef USE_MAG
@@ -85,7 +85,7 @@ void loop()
 
   Serial.print("\n");
 
-  async_debug_led_blink(200);
+  async_led_blink(200);
   wait_fps(50); // frames per second (max ~ 55)
 }
 
@@ -94,25 +94,11 @@ void loop()
 ///////////////////////////////////////////////////////////////////////////////
 void printTouchSense()
 {
-  // TODO: use simple ADC instead?
 #ifdef USE_CAP_SENSE
-  // capacitive sensing
-  static float old_val = 0.0;
-  const float smooth_coef = 0.5;
+//int value = digitalRead(cap_touch_pin) * 255; // TODO: test w/ pinMode(cap_touch_pin, INPUT) ?
+  int value = analogRead(cap_touch_pin) / 4;    // max 255
 
-  // const float threshold = 5;
-  // value = (value > threshold);
-
-  float value = cap_touch.read(5) - cap_touch_reference;
-  value = value * smooth_coef  +  old_val * (1 - smooth_coef);
-  old_val = value;
-
- #ifdef ARDUINO_VISUALIZATION
-  Serial.print(value * 100);
- #else
   Serial.print(value);
- #endif
-
   Serial.print(" ");
 #endif
 }
@@ -121,6 +107,7 @@ void printTouchSense()
 ///////////////////////////////////////////////////////////////////////////////
 void printAccelData(uint8_t addr)
 {
+#if defined(USE_ACC0) || defined(USE_ACC1)
     accel.setDeviceAddr(addr);
     MC3672_acc_t rawAccel = accel.readRawAccel();
     delay(5);
@@ -129,16 +116,19 @@ void printAccelData(uint8_t addr)
     Serial.print(rawAccel.XAxis_g); Serial.print(" ");
     Serial.print(rawAccel.YAxis_g); Serial.print(" ");
     Serial.print(rawAccel.ZAxis_g); Serial.print(" ");
+#endif
 }
 
 
 ///////////////////////////////////////////////////////////////////////////////
 void printMagData()
 {
+#ifdef USE_MAG
+
   sensors_event_t event;
   mag.getEvent(&event);
 
-#ifdef USE_CAP_SENSE
+#ifdef USE_CAP_SENSE // TODO: check if it's still needed!
   // save space by moving the atan2 calculation to software
   Serial.print(event.magnetic.x);
   Serial.print(" ");
@@ -166,11 +156,13 @@ void printMagData()
  #endif
 
 #endif
+
+#endif
 }
 
 
 ///////////////////////////////////////////////////////////////////////////////
-void async_debug_led_blink(int ms_toggle)
+void async_led_blink(int ms_toggle)
 {
   static uint32_t time_stamp = 0;
 

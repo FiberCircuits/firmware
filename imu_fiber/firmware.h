@@ -1,21 +1,8 @@
-// Cap sense ///////////////////////////////////////////////////////////////////
-
-#define USE_CAP_SENSE
-
-
-#ifdef USE_CAP_SENSE
-  #include <ADCTouchSensor.h>
-
-  #ifdef ADCTOUCH_INTERNAL_GROUNDING
-    const int GROUNDED_PIN = -1;
-  #else
-    const int GROUNDED_PIN = PC15; // options: PC14/15 (or connect PA7/10/12)
-  #endif
-#endif
+// Are we using the dev board or our custom circuit?
+//#define MY_STM32C0116_DK
 
 
 // UART ///////////////////////////////////////////////////////////////////////
-//#define MY_STM32C0116_DK // using the dev board?
 
 #ifdef MY_STM32C0116_DK
   const int _RX = PA10_R;
@@ -38,7 +25,7 @@ const int _SCL = PB6;
   const int led = PB6;
   static bool LED_ON = LOW; // inverted logic
 #else // custom circuit
-  const int led = PA8;      // TODO: confirm! (can also be PA9_R or PA11)
+  const int led = PA8;
   static bool LED_ON = HIGH;
 #endif
 
